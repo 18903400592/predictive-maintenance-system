@@ -61,9 +61,18 @@ def main():
 
     engine = create_engine(DATABASE_URL)
     with engine.begin() as conn:
-        conn.execute(insert_sql, records)
+        # 分批插入，避免一次向云端数据库发送 10,000 条记录
+        batch_size = 500
 
-    print(f"已插入 {len(records)} 条记录（重复 udi 会被跳过）")
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i + batch_size]
+            conn.execute(insert_sql, batch)
+
+            print(
+                f"已插入 {min(i + batch_size, len(records))}/{len(records)} 条记录"
+            )
+
+        print(f"已插入 {len(records)} 条记录（重复 udi 会被跳过）")
 
 
 if __name__ == "__main__":

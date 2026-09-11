@@ -5,7 +5,7 @@ import { useScrollRotation } from '../hooks/useScrollRotation'
 import { useSectionReveal } from '../hooks/useSectionReveal'
 import { MODEL_METRICS } from '../constants/modelMetrics'
 
-const API_BASE = 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 const SHOWCASE_UDI = 46
 
 const RISK_LEVEL_LABEL = {
