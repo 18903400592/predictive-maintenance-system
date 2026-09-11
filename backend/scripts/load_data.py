@@ -31,7 +31,24 @@ COLUMN_MAP = {
 BOOL_COLUMNS = ["machine_failure", "twf", "hdf", "pwf", "osf", "rnf"]
 
 
-def main():
+INSERT_SQL = text(
+    """
+    INSERT INTO machines (
+        udi, product_id, type, air_temp_k, process_temp_k,
+        rotational_speed_rpm, torque_nm, tool_wear_min,
+        machine_failure, twf, hdf, pwf, osf, rnf
+    ) VALUES (
+        :udi, :product_id, :type, :air_temp_k, :process_temp_k,
+        :rotational_speed_rpm, :torque_nm, :tool_wear_min,
+        :machine_failure, :twf, :hdf, :pwf, :osf, :rnf
+    )
+    ON CONFLICT (udi) DO NOTHING
+    """
+)
+
+
+def load_data(engine, batch_size: int = 500) -> int:
+    """从 CSV 加载设备数据到 machines 表，按 udi 去重（重复 udi 会被跳过）。返回处理的记录总数。"""
     df = pd.read_csv(CSV_PATH)
     df = df.rename(columns=COLUMN_MAP)
 
@@ -44,35 +61,20 @@ def main():
 
     records = df[list(COLUMN_MAP.values())].to_dict(orient="records")
 
-    insert_sql = text(
-        """
-        INSERT INTO machines (
-            udi, product_id, type, air_temp_k, process_temp_k,
-            rotational_speed_rpm, torque_nm, tool_wear_min,
-            machine_failure, twf, hdf, pwf, osf, rnf
-        ) VALUES (
-            :udi, :product_id, :type, :air_temp_k, :process_temp_k,
-            :rotational_speed_rpm, :torque_nm, :tool_wear_min,
-            :machine_failure, :twf, :hdf, :pwf, :osf, :rnf
-        )
-        ON CONFLICT (udi) DO NOTHING
-        """
-    )
-
-    engine = create_engine(DATABASE_URL)
     with engine.begin() as conn:
         # 分批插入，避免一次向云端数据库发送 10,000 条记录
-        batch_size = 500
-
         for i in range(0, len(records), batch_size):
             batch = records[i:i + batch_size]
-            conn.execute(insert_sql, batch)
+            conn.execute(INSERT_SQL, batch)
+            print(f"已插入 {min(i + batch_size, len(records))}/{len(records)} 条记录")
 
-            print(
-                f"已插入 {min(i + batch_size, len(records))}/{len(records)} 条记录"
-            )
+    return len(records)
 
-        print(f"已插入 {len(records)} 条记录（重复 udi 会被跳过）")
+
+def main():
+    engine = create_engine(DATABASE_URL)
+    count = load_data(engine)
+    print(f"已处理 {count} 条记录（重复 udi 会被跳过）")
 
 
 if __name__ == "__main__":
