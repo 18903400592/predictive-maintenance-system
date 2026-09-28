@@ -29,9 +29,22 @@ It currently focuses on:
 - HTML / CSS
 - Git
 
+## How It Works
+
+The current workflow is:
+
+Manufacturing Data
+        ↓
+   PostgreSQL
+        ↓
+   FastAPI API
+        ↓
+   React Frontend
+        ↓
+Monitoring & Analysis
+
 ## Project Structure
 
-```text
 predictive-maintenance-system/
 ├── backend/
 ├── frontend/
